@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tzlicecream 实时流量价格</title>
+  <!-- 引入 html2canvas 库用于截图 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+          integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    /* --- 基础变量 --- */
+    :root {
+      /* 深色主题变量 */
+      --bg-primary-dark: #0d1117;
+      --bg-secondary-dark: #161b22;
+      --bg-card-dark: #1a2029;
+      --border-color-dark: #30363d;
+      --text-primary-dark: #e6edf3;
+      --text-secondary-dark: #8b949e;
+      --success-dark: #2ea043;
+      --danger-dark: #f85149;
+      --warning-dark: #d29922;
+      --info-dark: #58a6ff;
+      --hover-dark: rgba(88, 166, 255, 0.2);
+
+      /* 浅色主题变量 */
+      --bg-primary-light: #f6f8fa;
+      --bg-secondary-light: #eaeef2;
+      --bg-card-light: #ffffff;
+      --border-color-light: #d0d7de;
+      --text-primary-light: #1f2328;
+      --text-secondary-light: #636c76;
+      --success-light: #1a7f37;
+      --danger-light: #cf222e;
+      --warning-light: #9a6700;
+      --info-light: #0969da;
+      --hover-light: rgba(9, 105, 218, 0.15);
+
+      /* 当前主题变量 (默认深色) */
+      --bg-primary: var(--bg-primary-dark);
+      --bg-secondary: var(--bg-secondary-dark);
+      --bg-card: var(--bg-card-dark);
+      --border-color: var(--border-color-dark);
+      --text-primary: var(--text-primary-dark);
+      --text-secondary: var(--text-secondary-dark);
+      --success: var(--success-dark);
+      --danger: var(--danger-dark);
+      --warning: var(--warning-dark);
+      --info: var(--info-dark);
+      --hover-bg: var(--hover-dark);
+    }
+
+    /* --- 浅色主题类 --- */
+    .light-theme {
+      --bg-primary: var(--bg-primary-light);
+      --bg-secondary: var(--bg-secondary-light);
+      --bg-card: var(--bg-card-light);
+      --border-color: var(--border-color-light);
+      --text-primary: var(--text-primary-light);
+      --text-secondary: var(--text-secondary-light);
+      --success: var(--success-light);
+      --danger: var(--danger-light);
+      --warning: var(--warning-light);
+      --info: var(--info-light);
+      --hover-bg: var(--hover-light);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      position: relative;
+      transition: background-color 0.3s, color 0.3s; /* 平滑过渡 */
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 15px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 0;
+      background: linear-gradient(90deg, var(--info), var(--success));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap; /* 在小屏幕上换行 */
+    }
+
+    .btn {
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--success) 0%, #1a6b2d);
+      border: none;
+      padding: 10px 16px;
+      color: white;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(35, 134, 54, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap; /* 防止文字换行 */
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, #2ea043 0%, var(--success));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(35, 134, 54, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #21262d 0%, #161b22);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .light-theme .btn-secondary {
+      background: linear-gradient(135deg, #d0d7de 0%, #b1bac4);
+      color: var(--text-primary-light);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .light-theme .btn-secondary:hover {
+      background: linear-gradient(135deg, #b1bac4 0%, #9ea7b1);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    /* --- 新增分享按钮样式 --- */
+    #shareBtn {
+      background: linear-gradient(135deg, var(--info) 0%, #3178c6);
+      box-shadow: 0 4px 10px rgba(88, 166, 255, 0.3);
+    }
+    #shareBtn:hover {
+      background: linear-gradient(135deg, #58a6ff 0%, var(--info));
+      box-shadow: 0 6px 15px rgba(88, 166, 255, 0.4);
+    }
+    /* --- 新增分享按钮样式结束 --- */
+
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      transition: transform 0.3s ease, background-color 0.3s, border-color 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--info);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* --- 修改为双列网格布局 --- */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 固定两列 */
+      gap: 15px 25px; /* 行间距 15px, 列间距 25px */
+    }
+
+    /* --- 调整行样式以适应双列 --- */
+    .row {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .label {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-weight: 600;
+      font-size: 1.15rem;
+      line-height: 1.3;
+      text-align: left;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+      position: relative;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .value:hover {
+      background-color: var(--hover-bg);
+    }
+
+    /* --- 复制提示样式 --- */
+    .copy-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--text-primary);
+        color: var(--bg-primary);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 10;
+    }
+    .value:hover .copy-tooltip {
+        opacity: 1;
+    }
+    /* --- 复制提示样式结束 --- */
+
+
+    .huge {
+      font-size: 1.25rem;
+      color: var(--text-primary);
+    }
+
+    .bad {
+      color: var(--danger);
+    }
+
+    .warning {
+      color: var(--warning);
+    }
+
+    .good {
+      color: var(--success);
+    }
+
+    .calculator-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .calculator-title {
+      font-size: 1.4rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--warning);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .calculator-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 15px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--info);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+    }
+
+    select {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 15px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+    }
+
+    .result {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .chart-container {
+       margin-top: 20px;
+       overflow: hidden;
+       transition: max-height 0.5s ease-out, opacity 0.5s ease-out;
+       max-height: 500px;
+       opacity: 1;
+    }
+    .chart-container.collapsed {
+       max-height: 0;
+       opacity: 0;
+    }
+
+    .chart-title {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      color: var(--info);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-toggle-btn {
+       background: none;
+       border: none;
+       color: var(--text-secondary);
+       cursor: pointer;
+       font-size: 1rem;
+       display: flex;
+       align-items: center;
+       gap: 5px;
+       padding: 5px;
+       border-radius: 4px;
+    }
+    .chart-toggle-btn:hover {
+        background-color: rgba(139, 148, 158, 0.1);
+        color: var(--text-primary);
+    }
+
+    .chart {
+      width: 100%;
+      height: 200px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .btn-group {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .calculator-form {
+        grid-template-columns: 1fr;
+      }
+      
+      .input-group {
+        flex-direction: column;
+      }
+
+      /* --- 在小屏幕上改为单列布局 --- */
+      .card-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      /* --- 小屏单列布局结束 --- */
+    }
+
+    /* --- 状态指示器样式 --- */
+    #statusIndicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        z-index: 1000;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .status-online {
+        background-color: var(--success);
+        animation: pulse-green 2s infinite;
+    }
+
+    .status-offline {
+        background-color: var(--danger);
+        animation: pulse-red 2s infinite;
+    }
+
+    @keyframes pulse-green {
+        0% {
+            box-shadow: 0 0 0 0 rgba(46, 160, 67, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 6px rgba(46, 160, 67, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(46, 160, 67, 0);
+        }
+    }
+
+    @keyframes pulse-red {
+        0% {
+            box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 6px rgba(248, 81, 73, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(248, 81, 73, 0);
+        }
+    }
+    /* --- 状态指示器样式结束 --- */
+
+    /* --- 主题切换按钮样式 --- */
+    #themeToggleBtn {
+        background: none;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+    #themeToggleBtn:hover {
+        background-color: rgba(139, 148, 158, 0.1);
+    }
+    .light-theme #themeToggleBtn {
+        border-color: var(--border-color-light);
+        color: var(--text-primary-light);
+    }
+    .light-theme #themeToggleBtn:hover {
+        background-color: rgba(99, 108, 118, 0.1);
+    }
+    /* --- 主题切换按钮样式结束 --- */
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Tzlicecream 实时流量价格</h1>
+      <div class="btn-group">
+        <button class="btn" id="refreshBtn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+          </svg>
+          刷新
+        </button>
+        <button class="btn btn-secondary" id="copyGbBtn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+            <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+          </svg>
+          复制每GB价格
+        </button>
+        <!-- 新增分享按钮 -->
+        <button class="btn" id="shareBtn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
+          </svg>
+          分享
+        </button>
+        <!-- 主题切换按钮 -->
+        <button id="themeToggleBtn">
+            <svg id="themeIcon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
+            </svg>
+            <span id="themeText">浅色</span>
+        </button>
+      </div>
+    </header>
+    
+    <!-- 状态指示器 -->
+    <div id="statusIndicator" class="status-offline"></div>
+    
+    <div class="card" id="priceCard">
+      <h2 class="card-title">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M0 4s3-2 4-2 5 2 8 2 4-2 4-2v6s-3 2-4 2-5-2-8-2-4 2-4 2V4zm2 3h12v1H2V7zm0 3h12v1H2v-1z"/>
+        </svg>
+        实时价格
+      </h2>
+      <div class="card-grid">
+        <div class="row">
+          <span class="label">BTC 实时价格（CNY）</span>
+          <span id="btcCny" class="value huge">—</span>
+        </div>
+        <div class="row">
+          <span class="label">每 bit 价格（BTC）</span>
+          <span id="pricePerBitBTC" class="value huge">—</span>
+        </div>
+        <div class="row">
+          <span class="label">每 bit 价格（元）</span>
+          <span id="pricePerBitCNY" class="value huge copyable">
+            —
+            <span class="copy-tooltip">点击复制</span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label">每 Byte 价格（元）</span>
+          <span id="pricePerByte" class="value huge copyable">
+            —
+            <span class="copy-tooltip">点击复制</span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label">每 KB 价格（元）</span>
+          <span id="pricePerKB" class="value huge copyable">
+            —
+            <span class="copy-tooltip">点击复制</span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label">每 MB 价格（元）</span>
+          <span id="pricePerMB" class="value huge copyable">
+            —
+            <span class="copy-tooltip">点击复制</span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label">每 GB 价格（元）</span>
+          <span id="pricePerGB" class="value huge bad copyable">
+            —
+            <span class="copy-tooltip">点击复制</span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label">更新时间</span>
+          <span id="updatedAt" class="value">—</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="calculator-card">
+      <h2 class="calculator-title">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M10.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h1ZM12 0a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2h-2Zm-.5 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V4ZM5.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h1ZM7 0a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H7Zm-.5 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V4ZM2 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V2Zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V5Zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V8Zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Z"/>
+        </svg>
+        流量费用计算器
+      </h2>
+      <div class="calculator-form">
+        <div class="input-group">
+          <input type="number" id="trafficAmount" placeholder="输入流量大小" min="0" step="0.01">
+          <select id="trafficUnit">
+            <option value="GB">GB</option>
+            <option value="MB">MB</option>
+            <option value="KB">KB</option>
+            <option value="Byte">Byte</option>
+          </select>
+        </div>
+        <button class="btn" id="calculateBtn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+          </svg>
+          计算
+        </button>
+      </div>
+      <div class="result">
+        费用: <span id="calculationResult">-</span>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2 class="card-title">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M0 0v16h16V0H0zm1 1h14v11H1V1zm1 12h4v2H2v-2zm5 0h4v2H7v-2zm5 0h3v2h-3v-2zM2 3h12v7H2V3z"/>
+        </svg>
+        价格历史
+         <button class="chart-toggle-btn" id="chartToggleBtn">
+             <span id="chartToggleText">收起</span>
+             <svg id="chartToggleIcon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                 <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+             </svg>
+         </button>
+      </h2>
+      <div class="chart-container" id="chartContainer">
+        <div class="chart-title">最近每GB价格趋势</div>
+        <svg class="chart" id="priceChart"></svg>
+      </div>
+    </div>
+    
+    <footer>
+      <p>数据来源: CoinGecko API | 更新频率: 60秒</p>
+      <p>© 2023 Tzlicecream 流量价格监控</p>
+    </footer>
+  </div>
+
+  <script>
+    // 格式化函数
+    const fmt2 = (n, d=2) => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: d }).format(n);
+    const fmt8 = (n) => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 8 }).format(n);
+    const fmt12 = (n) => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 12 }).format(n);
+    
+    // 单位常量
+    const BYTES_PER_KB = 1024;
+    const BYTES_PER_MB = 1024 * 1024;
+    const BYTES_PER_GB = 1024 * 1024 * 1024;
+    const BITS_PER_BYTE = 8;
+    
+    // 价格历史数据
+    let priceHistory = [];
+    
+    // --- 主题切换逻辑 ---
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    // 检查本地存储的偏好设置
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.body.classList.toggle('light-theme', savedTheme === 'light');
+    updateThemeButton(savedTheme);
+
+    themeToggleBtn.addEventListener('click', () => {
+        const isLight = document.body.classList.contains('light-theme');
+        const newTheme = isLight ? 'dark' : 'light';
+        document.body.classList.toggle('light-theme', !isLight);
+        localStorage.setItem('theme', newTheme); // 保存偏好
+        updateThemeButton(newTheme);
+    });
+
+    function updateThemeButton(theme) {
+        if (theme === 'light') {
+            themeText.textContent = '深色';
+            themeIcon.innerHTML = '<path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 1A5 5 0 1 1 8 3a5 5 0 0 1 0 10z"/><path d="M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5zM1 8a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 1 8zm12 0a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zM.5 6.5a.5.5 0 0 1 0-1 7 7 0 0 1 15 0 .5.5 0 0 1 0 1 7 7 0 0 1-15 0zM15.5 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM.5 8a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>';
+        } else {
+            themeText.textContent = '浅色';
+            themeIcon.innerHTML = '<path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>';
+        }
+    }
+    // --- 主题切换逻辑结束 ---
+
+    // --- 图表收起逻辑 ---
+    const chartToggleBtn = document.getElementById('chartToggleBtn');
+    const chartContainer = document.getElementById('chartContainer');
+    const chartToggleText = document.getElementById('chartToggleText');
+    const chartToggleIcon = document.getElementById('chartToggleIcon');
+
+    chartToggleBtn.addEventListener('click', () => {
+        chartContainer.classList.toggle('collapsed');
+        const isCollapsed = chartContainer.classList.contains('collapsed');
+        chartToggleText.textContent = isCollapsed ? '展开' : '收起';
+        chartToggleIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+    // --- 图表收起逻辑结束 ---
+    
+    // --- 悬停复制功能逻辑 ---
+    function setupCopyFunctionality() {
+        const copyableElements = document.querySelectorAll('.copyable');
+        copyableElements.forEach(el => {
+            el.addEventListener('click', () => {
+                const priceText = el.textContent.trim().replace(/[^\d.-]/g, '');
+                if (priceText && priceText !== '—') {
+                    navigator.clipboard.writeText(priceText).then(() => {
+                        const originalHTML = el.innerHTML;
+                        el.innerHTML = `
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
+                                <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                            </svg>
+                            已复制
+                            <span class="copy-tooltip">已复制</span>
+                        `;
+                        setTimeout(() => {
+                             el.innerHTML = originalHTML;
+                        }, 1500);
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                    });
+                }
+            });
+        });
+    }
+    // --- 悬停复制功能逻辑结束 ---
+    
+    // --- 分享功能逻辑 ---
+    async function shareCard() {
+        const card = document.getElementById('priceCard');
+        const shareBtn = document.getElementById('shareBtn');
+        const originalBtnHTML = shareBtn.innerHTML;
+
+        shareBtn.innerHTML = `
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+            生成中...
+        `;
+        shareBtn.disabled = true;
+
+        try {
+            const canvas = await html2canvas(card, {
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-card').trim(),
+                scale: 2,
+                useCORS: true
+            });
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                shareBtn.innerHTML = `
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                    </svg>
+                    已复制图片
+                `;
+            } catch (clipboardErr) {
+                console.error('写入剪贴板失败:', clipboardErr);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Tzlicecream_价格.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                shareBtn.innerHTML = `
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                    </svg>
+                    已下载图片
+                `;
+            }
+        } catch (error) {
+            console.error('截图或分享失败:', error);
+            alert('分享失败，请重试。');
+            shareBtn.innerHTML = originalBtnHTML;
+        } finally {
+            shareBtn.disabled = false;
+            setTimeout(() => {
+                if (!shareBtn.disabled) {
+                     shareBtn.innerHTML = originalBtnHTML;
+                }
+            }, 2000);
+        }
+    }
+    document.getElementById('shareBtn').addEventListener('click', shareCard);
+    // --- 分享功能逻辑结束 ---
+
+    // 获取BTC价格和计算流量价格的主要函数
+    async function fetchAndCalculatePrices() {
+        const statusIndicator = document.getElementById('statusIndicator');
+        statusIndicator.className = 'status-offline';
+
+        try {
+            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=cny');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const btcPriceInCNY = data.bitcoin.cny;
+
+            document.getElementById('btcCny').textContent = `¥${fmt2(btcPriceInCNY)}`;
+
+            // 核心逻辑：每bit价格 = 1 BTC
+            const pricePerBitInBTC = 1; // 1 BTC per bit
+            const pricePerBitInCNY = btcPriceInCNY * pricePerBitInBTC; // CNY per bit
+            const pricePerByteInCNY = pricePerBitInCNY * BITS_PER_BYTE; // CNY per Byte
+            const pricePerKBInCNY = pricePerByteInCNY * BYTES_PER_KB; // CNY per KB
+            const pricePerMBInCNY = pricePerKBInCNY * BYTES_PER_KB; // CNY per MB
+            const pricePerGBInCNY = pricePerMBInCNY * BYTES_PER_KB; // CNY per GB
+
+            // 更新页面显示
+            document.getElementById('pricePerBitBTC').textContent = `${fmt12(pricePerBitInBTC)} BTC`;
+            document.getElementById('pricePerBitCNY').innerHTML = `¥${fmt12(pricePerBitInCNY)} <span class="copy-tooltip">点击复制</span>`;
+            document.getElementById('pricePerByte').innerHTML = `¥${fmt12(pricePerByteInCNY)} <span class="copy-tooltip">点击复制</span>`;
+            document.getElementById('pricePerKB').innerHTML = `¥${fmt8(pricePerKBInCNY)} <span class="copy-tooltip">点击复制</span>`;
+            document.getElementById('pricePerMB').innerHTML = `¥${fmt2(pricePerMBInCNY)} <span class="copy-tooltip">点击复制</span>`;
+            document.getElementById('pricePerGB').innerHTML = `¥${fmt2(pricePerGBInCNY)} <span class="copy-tooltip">点击复制</span>`;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('zh-CN');
+            document.getElementById('updatedAt').textContent = timeString;
+
+            // 更新价格历史
+            priceHistory.push({ time: now, price: pricePerGBInCNY });
+            if (priceHistory.length > 20) priceHistory.shift();
+            drawChart();
+
+            // 更新状态指示器
+            statusIndicator.className = 'status-online';
+            setupCopyFunctionality();
+
+        } catch (error) {
+            console.error('获取价格失败:', error);
+            document.getElementById('btcCny').textContent = '获取失败';
+            document.getElementById('pricePerBitBTC').textContent = '获取失败';
+            document.getElementById('pricePerBitCNY').textContent = '获取失败';
+            document.getElementById('pricePerByte').textContent = '获取失败';
+            document.getElementById('pricePerKB').textContent = '获取失败';
+            document.getElementById('pricePerMB').textContent = '获取失败';
+            document.getElementById('pricePerGB').textContent = '获取失败';
+            statusIndicator.className = 'status-offline';
+        }
+    }
+
+    // 绘制SVG图表
+    function drawChart() {
+        const svg = document.getElementById('priceChart');
+        svg.innerHTML = '';
+
+        if (priceHistory.length < 2) return;
+
+        const width = svg.clientWidth;
+        const height = svg.clientHeight;
+        const margin = { top: 10, right: 10, bottom: 30, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const prices = priceHistory.map(d => d.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const priceRange = maxPrice - minPrice || 1;
+
+        const times = priceHistory.map(d => d.time);
+        const minTime = Math.min(...times);
+        const maxTime = Math.max(...times);
+        const timeRange = maxTime - minTime || 1;
+
+        const xScale = d => ((d.time - minTime) / timeRange) * innerWidth + margin.left;
+        const yScale = d => innerHeight - ((d.price - minPrice) / priceRange) * innerHeight + margin.top;
+
+        let pathData = "M";
+        priceHistory.forEach((point, i) => {
+            const x = xScale(point);
+            const y = yScale(point);
+            pathData += `${x},${y} `;
+        });
+
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        xAxis.setAttribute('x1', margin.left);
+        xAxis.setAttribute('y1', margin.top + innerHeight);
+        xAxis.setAttribute('x2', margin.left + innerWidth);
+        xAxis.setAttribute('y2', margin.top + innerHeight);
+        xAxis.setAttribute('stroke', 'var(--text-secondary)');
+        xAxis.setAttribute('stroke-width', '1');
+        svg.appendChild(xAxis);
+
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', margin.left);
+        yAxis.setAttribute('y1', margin.top);
+        yAxis.setAttribute('x2', margin.left);
+        yAxis.setAttribute('y2', margin.top + innerHeight);
+        yAxis.setAttribute('stroke', 'var(--text-secondary)');
+        yAxis.setAttribute('stroke-width', '1');
+        svg.appendChild(yAxis);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        path.setAttribute('points', pathData.trim());
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', 'var(--info)');
+        path.setAttribute('stroke-width', '2');
+        svg.appendChild(path);
+
+        const lastPoint = priceHistory[priceHistory.length - 1];
+        const lastX = xScale(lastPoint);
+        const lastY = yScale(lastPoint);
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', lastX);
+        circle.setAttribute('cy', lastY);
+        circle.setAttribute('r', '4');
+        circle.setAttribute('fill', 'var(--info)');
+        svg.appendChild(circle);
+
+        const priceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        priceText.setAttribute('x', lastX + 6);
+        priceText.setAttribute('y', lastY - 6);
+        priceText.setAttribute('fill', 'var(--text-primary)');
+        priceText.setAttribute('font-size', '12');
+        priceText.textContent = `¥${fmt2(lastPoint.price)}`;
+        svg.appendChild(priceText);
+
+        const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        yLabel.setAttribute('x', margin.left - 10);
+        yLabel.setAttribute('y', margin.top + 15);
+        yLabel.setAttribute('fill', 'var(--text-secondary)');
+        yLabel.setAttribute('font-size', '10');
+        yLabel.setAttribute('text-anchor', 'end');
+        yLabel.textContent = `¥${fmt2(maxPrice)}`;
+        svg.appendChild(yLabel);
+
+        const yLabelMin = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        yLabelMin.setAttribute('x', margin.left - 10);
+        yLabelMin.setAttribute('y', margin.top + innerHeight);
+        yLabelMin.setAttribute('fill', 'var(--text-secondary)');
+        yLabelMin.setAttribute('font-size', '10');
+        yLabelMin.setAttribute('text-anchor', 'end');
+        yLabelMin.setAttribute('dominant-baseline', 'middle');
+        yLabelMin.textContent = `¥${fmt2(minPrice)}`;
+        svg.appendChild(yLabelMin);
+
+    }
+
+    // 计算器功能
+    document.getElementById('calculateBtn').addEventListener('click', () => {
+        const amount = parseFloat(document.getElementById('trafficAmount').value);
+        const unit = document.getElementById('trafficUnit').value;
+        const pricePerGBText = document.getElementById('pricePerGB').textContent;
+        const pricePerGB = parseFloat(pricePerGBText.replace(/[^\d.-]/g, ''));
+
+        if (isNaN(amount) || isNaN(pricePerGB) || pricePerGBText.includes('获取失败')) {
+            document.getElementById('calculationResult').textContent = '请输入有效数字或等待数据加载';
+            return;
+        }
+
+        let bytes;
+        switch (unit) {
+            case 'GB': bytes = amount * BYTES_PER_GB; break;
+            case 'MB': bytes = amount * BYTES_PER_MB; break;
+            case 'KB': bytes = amount * BYTES_PER_KB; break;
+            case 'Byte': bytes = amount; break;
+            default: bytes = amount * BYTES_PER_GB;
+        }
+
+        const totalCost = (bytes / BYTES_PER_GB) * pricePerGB;
+        document.getElementById('calculationResult').textContent = `¥${fmt2(totalCost)}`;
+    });
+
+    // 复制每GB价格功能
+    document.getElementById('copyGbBtn').addEventListener('click', () => {
+        const gbPriceElement = document.getElementById('pricePerGB');
+        const gbPriceText = gbPriceElement.textContent.trim().replace(/[^\d.-]/g, '');
+        if (gbPriceText && gbPriceText !== '获取失败' && gbPriceText !== '—') {
+            navigator.clipboard.writeText(gbPriceText).then(() => {
+                 const originalText = document.getElementById('copyGbBtn').innerHTML;
+                 document.getElementById('copyGbBtn').innerHTML = `
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                    </svg>
+                    已复制
+                 `;
+                 setTimeout(() => {
+                     document.getElementById('copyGbBtn').innerHTML = originalText;
+                 }, 1500);
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        }
+    });
+
+    // 刷新按钮功能
+    document.getElementById('refreshBtn').addEventListener('click', fetchAndCalculatePrices);
+
+    // 页面加载完成后立即执行一次
+    window.addEventListener('load', () => {
+        fetchAndCalculatePrices();
+        setInterval(fetchAndCalculatePrices, 60000);
+    });
+  </script>
+</body>
+</html>
+
+
+
